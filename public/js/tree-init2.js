@@ -213,6 +213,9 @@ function init(data) {
             style.fontSize = '1em';
             style.textAlign = 'center';
             style.paddingTop = '3px';
+            setTimeout(function () {
+            	$('.title').tooltip();
+            }, 1000);
         },
 
         //This method is called right before plotting
