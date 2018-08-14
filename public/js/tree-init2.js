@@ -31,7 +31,7 @@ function get_managers_for_new_person(node) {
 
 function create_inner_html(node) {
 	var name = node.name.replace(/^(.{15}[^\s]*).*/, "$1");
-	if (node.name.length > 15 && node.name.length != name.lenght) {
+	if (node.name.length > 15 && node.name.length != name.length) {
 		name += "...";
 	}
 	var html = `
