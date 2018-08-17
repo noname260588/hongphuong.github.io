@@ -1114,6 +1114,11 @@ var v = new Vue({
 
 
 
+        compareArrays:function(arr1, arr2) {
+            // only for array of string values. Other types was not test
+            return $(arr1).not(arr2).length == 0 && $(arr2).not(arr1).length == 0
+        },
+
         getListGroupV2: function(){
             //debugger;
             var self = this;
@@ -1166,15 +1171,28 @@ var v = new Vue({
                 return group;
             });
 
+
             // self.kpi_list[kpi_id].kpi_refer_group
-            var result=$.grep(groups,function(group, index){
+            var unique_groups=$.grep(groups,function(group, index){
                 // return index == $.inArray(group, array);
                 var first_index_found=groups.findIndex(g => g.slug == group.slug);
                 return index == first_index_found;
                 // return index == $.inArray(group, array);
             });
 
-            self.$set('list_group',result);
+            var unique_group_slugs=$.map(unique_groups, function(g, index){
+                return g.slug;
+            });
+            var pre_unique_group_slugs=$.map(self.list_group, function(g, index){
+                return g.slug;
+            });
+
+
+            if(self.compareArrays(unique_group_slugs, pre_unique_group_slugs) === false){
+                self.$set('list_group',unique_groups);
+            }
+
+            // self.$set('list_group',result);
 
 
             // self.list_group = listGroup;
@@ -2362,7 +2380,8 @@ var v = new Vue({
                 success: function (data) {
                     console.log("success");
                     that.get_current_employee_performance();
-                    that.$set('kpi_list['+kpi.id+ ']',data)
+                    var update_kpi = Object.assign(that.kpi_list[kpi.id], data);
+                    that.$set('kpi_list['+kpi.id+ ']', update_kpi);
                     that.getListGroupV2()
                     //$('.group-header-kpi-name' + kpi.id).text(kpi.refer_group_name);
                     if (typeof callback == "function") {
