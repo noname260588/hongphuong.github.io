@@ -4970,6 +4970,7 @@ button.close{
     padding-right: 22px;
     max-height:  calc(100vh - 230px);
     overflow: auto;
+    min-height: 200px;
 }
 
 .dropdown-func-cate .el-cascader-menu{
@@ -5148,7 +5149,7 @@ button.close{
     cursor: unset!important;
 }
 #list_kpi_suggest .list-group{
-    max-height: 200px;
+    max-height: 185px;
     overflow: auto;
 }
 #list_kpi_suggest .list-group-item:hover{
