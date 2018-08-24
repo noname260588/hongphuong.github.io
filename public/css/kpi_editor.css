@@ -4512,12 +4512,12 @@ button.close{
     margin-top: 4px;
     margin-bottom: 4px;
 }
-#option-choose-lang .nav-tabs>li.active>button{
+#option-choose-lang .btn-group>button.active{
     background-color: #d9eeee;
     border: solid 1px #008b8b;
     color: #008b8b;
 }
-#option-choose-lang .nav-tabs>li.active>button:focus{
+#option-choose-lang .btn-group>button:focus{
     outline: none;
 }
 .btn.btn-normal.btn-tab{
