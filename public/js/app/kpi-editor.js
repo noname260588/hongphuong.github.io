@@ -285,9 +285,15 @@ function load_kpi_anchor(anchor, delay, force_load, dont_load_in_failed, not_fol
                         }
 
                     } else {
+                        //var myhtml = "\x3Cdiv>new div\x3C/div>   \x3Cscript> v.$set(v.$data, 'kpi_list[123]', {'a':'the fucking setting property outside vue instance'}); alert(v.$data.kpi_list[123]); \x3C/script>"; // --> this does not work
+                        //var myhtml = "\x3Cdiv>new div\x3C/div>   \x3Cscript> v.kpi_list_1[123] = 'the fucking setting property outside vue instance'; alert(v.$data.kpi_list_1[123]); \x3C/script>"; // ---> this work
+                        //var myhtml = "\x3Cdiv>new div\x3C/div>   \x3Cscript> v.$set(v.kpi_list,'123', {'a':'the fucking setting property outside vue instance'}); alert(v.$data.kpi_list[123]); \x3C/script>"; //---> this work
+                        //$('#mymonth1div').replaceWith(myhtml);
+
                         // $(that).children('.kpi-parent-wrapper').remove();
                         // $(that).append(data);
-                        $(that).children('.kpi-child-container').replaceWith(data)
+                        var $dom_obj=$(data);
+                        $(that).children('.kpi-child-container').replaceWith($dom_obj)
                     }
 
                     // v.$compile(v.$el);
@@ -566,6 +572,7 @@ function init_scroll_event() {
 
 
 function init_toggle_kpi() {
+    return;
     $(document).on('click', '.btn-kpi-toggle', function () {
         var theBtn = this;
         var animate_elm = $(this).closest('.kpi-parent-wrapper').children('.kpi-child-container');
