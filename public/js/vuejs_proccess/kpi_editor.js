@@ -1410,10 +1410,135 @@ Vue.component('kpi-config', {
         init_data_align_up_kpi:function(user, kpi_id, bsc_category){
           this.$root.$emit('init_data_align_up_kpi', user, kpi_id, bsc_category);
         },
+        add_child_kpi: function(){
+            var parent_kpi_id=this.kpi.id;
+            this.$root.$emit('add_child_kpi', parent_kpi_id);
+        }
     }
 
 });
 
+Vue.component('kpi-new', {
+    delimiters: ['{$', '$}'],
+    props: [
+        // 'kpi',
+        // 'organization',
+
+    ],
+    data:function(){
+        return {
+
+        }
+    },
+    template: $('#kpi-new-template').html(),
+    created: function(){
+
+    },
+    mounted:function(){
+
+
+    },
+    watch:{
+    },
+    computed:{
+
+    },
+    methods:{
+
+    }
+
+});
+
+Vue.component('btn-new-kpi', {
+    delimiters: ['{$', '$}'],
+    template: $('#btn-new-kpi-template').html(),
+
+    methods:{
+        show__add_kpi_methods_modal: function(){
+            // alert('show modal add new kpi');
+            // show modal new kpi
+            this.$root.$emit('show__add_kpi_methods_modal');
+        }
+    }
+
+});
+Vue.component('new-kpi-by-category-modal', {
+    delimiters: ['{$', '$}'],
+    data:function(){
+        return {
+            category:'',
+            options:[
+                {
+                    id: 'financial',
+                    name: 'Tài chính',
+                },
+                {
+                    id: 'customer',
+                    name: 'Khách hàng',
+                },
+                {
+                    id: 'internal',
+                    name: 'Quy trình nội bộ',
+                },
+                {
+                    id: 'learninggrowth',
+                    name: 'Đào tạo & phát triển',
+                },
+                {
+                    id: 'other',
+                    name: 'Khác',
+                },
+            ]
+        }
+    },
+
+    template: $('#new-kpi-by-category-modal-template').html(),
+    mounted:function(){
+        this.category='financial';
+
+    },
+    methods:{
+        add_new_kpi_by_category: function(){
+            var that=this;
+            // show modal new kpi
+            this.$root.$emit('add_new_kpi_by_category', that.category);
+        },
+        changeCategory: function(){
+            // alert('changeCategory');
+        },
+    }
+
+});
+Vue.component('add-kpi-methods-modal', {
+    delimiters: ['{$', '$}'],
+    props:[
+        'organization',
+    ],
+
+    template: $('#add-kpi-methods-modal-template').html(),
+    mounted:function(){
+        var that=this;
+        $('#add-kpi-methods-modal').on('show.bs.modal', function (e) {
+          // when the organization do not enable kpi lib, we should show modal new-kpi-by-category directly
+            if (that.organization && !that.organization.enable_kpi_lib){
+                that.show__new_kpi_by_category_modal();
+                return false; // cancel show event
+                // $('#add-kpi-methods-modal').modal('hide');
+            }
+        })
+    },
+    methods:{
+        show__new_kpi_by_category_modal: function(){
+            var that=this;
+            // show modal new kpi
+            this.$root.$emit('show__new_kpi_by_category_modal');
+        },
+
+        show__new_kpi_by_kpilib_modal: function(){
+            this.$root.$emit('show__new_kpi_by_kpilib_modal');
+        },
+    }
+});
 
 Vue.component('kpi-progressbar', {
     delimiters: ['{$', '$}'],
@@ -1657,6 +1782,7 @@ Vue.component('kpi-row', {
             internal_kpi_list: this.kpi_list,
             show_childs:false,
             temp_value: {},
+            is_childs_show:false
         }
     },
     template: $('#kpi-row-template').html(),
@@ -1744,19 +1870,30 @@ Vue.component('kpi-row', {
             // });
             return child_kpis;
         },
-
+        toggle_childs: function(){
+            var that=this;
+            var jqXhr=this.get_children_kpis();
+            if (jqXhr === null){
+                that.show_childs = ! that.show_childs;
+            }else{
+                jqXhr.success(function(){
+                    that.show_childs = ! that.show_childs;
+                });
+            }
+        },
         get_children_kpis:function(){
             var that = this;
+            var jqXhr=null;
             // alert('get_children_kpis');
 
-            this.show_childs = !this.show_childs;
+            // this.show_childs = !this.show_childs;
             if (this.is_child_kpis_loaded==true){
                 // return this.child_kpis;
             }
             else{
                 // get child kpis from server
 
-                cloudjetRequest.ajax({
+                jqXhr = cloudjetRequest.ajax({
                     type: 'get',
                     url: '/api/v2/kpi/?parent_id=' + that.kpi.id,
 
@@ -1789,10 +1926,10 @@ Vue.component('kpi-row', {
                         // $('.add_kpi').show();
                     }
                 });
-                // return [];
+
             }
 
-
+            return jqXhr;
 
 
         },
@@ -1877,7 +2014,8 @@ Vue.component('kpi-row', {
             this.$root.$emit('change_group', kpi);
         },
         update_kpi: function (kpi, show_blocking_modal, callback) {
-            v.update_kpi(kpi, show_blocking_modal, callback)
+            this.$root.$emit('update_kpi', kpi, show_blocking_modal, callback);
+
         }
 
 
@@ -2184,7 +2322,7 @@ var v = new Vue({
         this.fetch_current_user_profile();
         var p = JSON.parse(localStorage.getItem('history_search_u'));
         if (p == null) localStorage.removeItem('history_search');
-        this.storage_user = (p == null) ? [] : JSON.parse(localStorage.getItem('history_search'))[p.indexOf(COMMON.UserRequestEmail)];
+        this.storage_user = (p == null) ? [] : JSON.parse(localStorage.getItem('history_search'))[p.indexOf(COMMON.UserRequestEmail)] || [];
         // this.is_user_system = (COMMON.IsAdmin == 'True' || COMMON.IsSupperUser == 'True') ? true : false;
         this.get_surbodinate();
         this.same_user = (COMMON.UserRequestID == COMMON.UserViewedId) ? true : false;  // -> hot fix, has_perm(KPI__EDITING) => actor == target cho phep nhan vien tu chinh sua kpi, nhung logic moi thi khong cho phep
@@ -2362,9 +2500,147 @@ var v = new Vue({
         });
 
 
+        this.$on('show__add_kpi_methods_modal', function () {
+            // show_modal_add_kpi
+            // alert('show__add_kpi_methods_modal in root');
+            that.show__add_kpi_methods_modal();
+        });
+        this.$on('show__new_kpi_by_category_modal', function () {
+            that.show__new_kpi_by_category_modal();
+        });
+
+        this.$on('show__new_kpi_by_kpilib_modal', function () {
+            // show_kpilib
+            that.show__new_kpi_by_kpilib_modal();
+        });
+
+
+
+        this.$on('add_new_kpi_by_category', function (category) {
+            that.add_new_kpi_by_category(category);
+        });
+        this.$on('add_new_kpi_from_kpi_lib', function (kpi) {
+
+            that.add_new_kpi_from_kpi_lib(kpi);
+        });
+
+        this.$on('add_child_kpi', function (parent_kpi_id) {
+
+            that.add_child_kpi(parent_kpi_id);
+        });
+
+
+        this.$on('update_kpi', function (kpi, show_blocking_modal, callback) {
+            that.update_kpi(kpi, show_blocking_modal, callback);
+        });
+
+
+
 
     },
     methods: {
+        show__new_kpi_by_category_modal: function(){
+            this.hide__add_kpi_methods_modal();
+            $('#new-kpi-by-category-modal').modal('show');
+
+        },
+        show__new_kpi_by_kpilib_modal: function(){
+            this.hide__add_kpi_methods_modal();
+            // $('#new-kpi-by-kpilib-modal').modal('show');
+            $('#modal-kpi-lib').modal('show');
+        },
+
+
+        show__add_kpi_methods_modal: function(){
+            $('#add-kpi-methods-modal').modal('show');
+        },
+        hide__add_kpi_methods_modal: function(){
+            $('#add-kpi-methods-modal').modal('hide');
+        },
+        hide__new_kpi_by_category_modal:function(){
+            $('#new-kpi-by-category-modal').modal('hide');
+        },
+
+        add_child_kpi: function(parent_kpi_id){
+            var that=this;
+            var kpi_data={
+                parent_kpi_id:parent_kpi_id
+            };
+
+            var jqXhr=this.add_kpi(false, kpi_data);
+            // additional success callback function
+            jqXhr.success(function(){
+                that.$set(that.kpi_list[parent_kpi_id], 'has_child', true);
+                that.$set(that.kpi_list[parent_kpi_id], 'children_data', {'parent_score_auto': true});
+                // $('#btn-kpi-toggle'+kpi).children('i.fa').removeClass("fa-angle-double-right").addClass("fa-angle-double-down");
+            });
+
+
+        },
+        add_new_kpi_by_category:function(category){
+            var that=this;
+            var kpi_data={
+                'category':category
+            };
+            var jqXhr=this.add_kpi(false, kpi_data);
+            jqXhr.complete(function () {
+                that.hide__new_kpi_by_category_modal();
+            });
+        },
+        add_new_kpi_from_kpi_lib: function (k) {
+            $(".btn-add-kpilib").button("loading");
+
+            var jqXhr = this.add_kpi(true, k);
+            jqXhr.complete(function () {
+                $(".btn-add-kpilib").button("reset");
+                swal({
+                    type: 'success',
+                    title: gettext('Add KPI successfully'),
+                    text: k.name + gettext(' has been added successfully to the category ') + COMMON.BSCCategory[k.category] ,
+                    showConfirmButton: false,
+                    customClass: 'add-kpi-success',
+                    timer: 3000,
+                });
+            });
+
+        },
+        // set_selected_kpilib: function (k) { // unused
+        //     this.selected_kpilib = k;
+        // },
+
+        add_kpi:function(from_kpilib=false, kpi_data){
+            var that = this;
+
+            // var level = 1;
+            var data = {
+                'from_kpilib':from_kpilib,
+                'kpi_data': JSON.stringify(kpi_data),
+                // 'parent_kpi': kpi_data,
+                // 'level': level,
+                // 'new_template': true
+            };
+
+
+
+
+
+            var jqXhr=cloudjetRequest.ajax({
+                url: "/performance/kpi-editor/",
+                type: 'post',
+                data: data,
+                success: function (new_kpi_data) {
+
+                    that.$set(that.kpi_list, new_kpi_data.id, new_kpi_data);
+
+                },
+                error: function () {
+                }
+            });
+            return jqXhr;
+        },
+
+
+
         update_list_child_kpis:function(parent_kpi, list_children_kpis){
             var that = this;
             // alert('update_list_child_kpis function');
@@ -5509,12 +5785,7 @@ var v = new Vue({
             // that.delete_temp(kpi, key);
             kpi_ready(kpi['id'], controller_prefix, false);
         },
-        add_selected_kpilib: function (k) {
-            add_kpi(null, null, k.category, null, k);
-        },
-        set_selected_kpilib: function (k) {
-            this.selected_kpilib = k;
-        },
+
         average_3_month: function (employee_performance) {
             var count = 0;
             var total = 0;

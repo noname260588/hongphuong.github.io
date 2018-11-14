@@ -1151,7 +1151,13 @@ Vue.component('kpilib', {
         this.storage_kpis_template = this.storage_kpis;
     },
     mounted: function () {
-        this.addClassGoogleAnalytic()
+        var that = this;
+        this.addClassGoogleAnalytic();
+        // get_data_kpilib for each time the modal show
+        $('#modal-kpi-lib').on('show.bs.modal', function (e) {
+            // alert('#modal-kpi-lib show');
+            that.get_data_kpilib();
+        })
     },
     methods: {
         search_kpi_input_focus:function(){
@@ -1548,7 +1554,8 @@ Vue.component('kpilib', {
             $('#modal-kpi-lib-details').appendTo('body');
         },
         add_selected_kpilib: function (k) {
-            v.add_selected_kpilib(k);
+            this.$root.$emit('add_new_kpi_from_kpi_lib', k);
+            // v.add_selected_kpilib(k);
         },
         get_option_to_show: function (selected) {
 
