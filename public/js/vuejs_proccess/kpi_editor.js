@@ -430,11 +430,11 @@ Vue.mixin({
                 type: 'get',
                 url: '/api/v2/kpi/?include_parent=1&parent_id=' + parent_kpi_id,
 
-                success: function (data) {
+                success: function (kpi_data) {
                     // alert('child kpis loaded');
 
 
-                    that.$root.$emit('kpi_reloaded', parent_kpi_id, data);
+                    that.$root.$emit('kpi_reloaded', kpi_data);
 
 
                 },
@@ -1459,6 +1459,7 @@ Vue.component('kpi-config', {
     props: [
         'kpi',
         'organization',
+        'is_parent_kpi',
 
     ],
     data:function(){
@@ -1477,6 +1478,18 @@ Vue.component('kpi-config', {
     watch:{
     },
     computed:{
+        can_add_child_kpi: function(){
+            return (this.kpi.weight > 0 && this.kpi.can_add_child_kpi)
+        },
+        show_change_owner_tip:function(){
+            return this.kpi.weight > 0 && !this.kpi.can_add_child_kpi && !this.is_parent_kpi
+        },
+        can_link_kpi:function(){
+          return (this.is_parent_kpi && this.kpi.weight > 0) && (!this.kpi.parent && !this.kpi.refer_to && !this.kpi.cascaded_from )
+        },
+        can_unlink_kpi:function(){
+            return (!this.kpi.parent && this.kpi.refer_to && this.kpi.cascaded_from)
+        },
 
     },
     methods:{
@@ -1749,15 +1762,16 @@ Vue.component('add-kpi-methods-modal', {
 // Vue.use(Autocomplete);
 
 
-Vue.component('kpi-onwer', {
+Vue.component('kpi-owner', {
     delimiters: ['{$', '$}'],
     props: [
         'kpi',
+        'is_parent_kpi',
 
     ],
     data:function(){
         return {
-
+            show_search_box:false,
         }
     },
     template: $('#kpi-owner-template').html(),
@@ -1771,6 +1785,13 @@ Vue.component('kpi-onwer', {
     watch:{
     },
     computed:{
+        search_url: function () {
+            return '/api/v2/searchable_peoplelist/?&limit=10&from_kpi_id=' + this.kpi.id + '&search_term='
+
+        },
+        is_able_to_change_owner: function () {
+            return !this.is_parent_kpi && this.kpi.weight > 0
+        }
 
     },
     methods:{
@@ -1791,41 +1812,57 @@ Vue.component('kpi-onwer', {
             // return result.name + ' [' + result.groupId + ']'
             return result.value
         },
-        onSelectInchargeUser (group) {
+        onSelectInchargeUser (selected_item) {
 
+            var that = this;
+            // alert('USER SELECTED');
+            // hide search box when an user selected
+            this.show_search_box=false;
+
+            var to_user_id=selected_item.value;
+            // do not update new tobe assigned user if kpi.user not change
+            if (to_user_id == this.kpi.user){
+                return false;
+            }
+
+            this.update_assigned_user_data(selected_item);
+            // assign/kpi/
+            var data={
+                owner_email: selected_item.selectedObject.email
+            };
+
+            var jqXhr=cloudjetRequest.ajax({
+                url: `/api/v2/kpi/${this.kpi.id}/assign-to/`,
+                type: 'put',
+                data: data,
+                success: function (kpi_data) {
+                    that.reload_kpi(that.kpi.id, false);
+                },
+                error: function (err) {
+                    if (err.responseJSON) {
+                        msg = err.responseJSON.message || err.responseJSON.owner_email;
+                        if (msg) {
+                            alert(msg);
+                        }
+                	}
+                    that.reload_kpi(that.kpi.id, false);
+                },
+            });
             // this.group = group
             // access the autocomplete component methods from the parent
             // this.$refs.autocomplete.clear()
         },
-        // use kpi.can_add_child_kpi instead
-        // getUserById: function (kpiId) {
-        //     if(kpiId == null) return null;
-        //     for(var i = 0; i < this.kpi_list.length; ++i){
-        //         if(this.kpi_list[i].id == kpiId)
-        //             return this.kpi_list[i].user
-        //     }
-        //     return null;
-        // },
-        change_kpi_category:function(kpi_id){
-            // this.$emit('change_category', kpi_id);
-            this.$root.$emit('change_category', kpi_id);
+
+        dismiss_popover: function(){
+            this.show_search_box = false;
         },
-        get_children_kpis: function(kpi_id){
-            // this.$emit('get_children_kpis', kpi_id);
-            this.$root.$emit('get_children_kpis', kpi_id);
+        update_assigned_user_data: function(selected_item){
+            var to_user=selected_item.selectedObject;
+            this.$set(this.kpi, 'user', to_user.id);
+            this.$set(this.kpi, 'incharge_user_email', to_user.email);
         },
-        set_month_target_from_last_quarter_three_months_result:function(kpi_id){
-            this.$root.$emit('set_month_target_from_last_quarter_three_months_result', kpi_id);
-        },
-        show_unique_code_modal: function(kpi_id){
-            this.$root.$emit('show_unique_code_modal', kpi_id)
-        },
-        unlink_align_up_kpi: function(user, kpi_id, bsc_category, event){
-            this.$root.$emit('unlink_align_up_kpi', user, kpi_id, bsc_category, event);
-        },
-        init_data_align_up_kpi:function(user, kpi_id, bsc_category){
-            this.$root.$emit('init_data_align_up_kpi', user, kpi_id, bsc_category);
-        },
+
+
     }
 
 });
@@ -1842,6 +1879,7 @@ Vue.component('kpi-progressbar', {
         'month_2_name',
         'month_3_name',
         'evidences',
+        'is_parent_kpi',
         // 'is_user_system',
 
     ],
@@ -1862,7 +1900,9 @@ Vue.component('kpi-progressbar', {
 
     },
     computed:{
-
+        show_progress_bar_score: function(){
+            return this.kpi.weight > 0
+        },
     },
     methods:{
         triggerAdjustPerformanceThreshold(kpi_id){
@@ -2166,6 +2206,7 @@ Vue.component('kpi-row', {
         'employee_performance',
         'company_params',
         'evidences',
+        'is_parent_kpi',
 
         // 'is_user_system',
 
@@ -2959,8 +3000,8 @@ var v = new Vue({
         this.$root.$on("adjust_performance_level", function(kpi_id) {
             that.adjust_performance_level(kpi_id)
         })
-        this.$on('kpi_reloaded', function (kpi_id, data) {
-            that.update_data_on_kpi_reloaded(kpi_id, data);
+        this.$on('kpi_reloaded', function (kpi_data) {
+            that.update_data_on_kpi_reloaded(kpi_data);
         });
 
         this.$on('kpi_removed', function (kpi_id) {
@@ -3088,7 +3129,7 @@ var v = new Vue({
 
 
         },
-        update_data_on_kpi_reloaded: function(kpi_id, data){
+        update_data_on_kpi_reloaded: function(kpi_data){
             var that = this;
 
             var update_kpi_data=function (kpi) {
@@ -3101,10 +3142,10 @@ var v = new Vue({
                 that.$set(that.kpi_list, kpi.id, kpi);
             };
 
-            that.remove_kpi_data(kpi_id);
+            that.remove_kpi_data(kpi_data.id);
 
             // alert('set new data after reload kpi');
-            update_kpi_data(data);
+            update_kpi_data(kpi_data);
             // this.kpi_list[]
         },
 

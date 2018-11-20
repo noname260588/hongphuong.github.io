@@ -10,6 +10,8 @@
     font-weight: bold;
 }
 
+
+
 .kpi-rating {
     /*margin-left: 20px;*/
     min-width: 130px;
@@ -5335,4 +5337,11 @@ button.close{
     background:transparent!important;
     color: #008b8b!important;
     vertical-align: unset!important;
+}
+
+.kpi-inp-incharge .autocomplete__results{
+    position: relative!important;
+}
+.autocomplete__inputs .input-change-owner {
+    height: 36px;
 }
