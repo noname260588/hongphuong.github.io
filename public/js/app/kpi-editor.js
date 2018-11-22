@@ -361,6 +361,7 @@ $(function () {
     //# end language options
 
 
+
     $("#search_user").focus(function () {
         if (v.query.length == 0) {
             $("#list_user_suggest").show();
@@ -387,3 +388,33 @@ $(function () {
 
 
 });
+
+/*kpi_editor_toolbar_top.html*/
+
+$(function() {
+    // v.get_surbodinate();
+    // v.get_surbodinate_user_viewed();
+
+});
+
+function regex_number(e) {
+    // alert(String.fromCharCode(e.keyCode));
+    // var reg = /(\d+(\.\d+)?)/;
+    if (e.keyCode == 37 || e.keyCode == 38 || e.keyCode == 39 || e.keyCode == 40 || e.keyCode == 8 || e.keyCode == 46 || e.keyCode == 110 || e.keyCode == 190) { // Left / Up / Right / Down Arrow, Backspace, Delete keys
+        return;
+    }
+    if ((e.keyCode >= 96 && e.keyCode <= 105) || (e.keyCode >= 48 && e.keyCode <= 57)) {
+        return;
+    }
+    else {
+        e.preventDefault();
+    }
+}
+
+
+function show_modal_export_kpi() {
+    $('#modal-export-kpi').modal();
+    $('#modal-export-kpi').appendTo('body')
+}
+
+/* end kpi_editor_toolbar_top.html*/

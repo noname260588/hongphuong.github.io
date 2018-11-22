@@ -317,6 +317,7 @@ table.nocolor, table.nocolor tr, table.nocolor td {
     font-weight: normal;
     line-height: 1.29;
     color: #333333;
+    white-space: pre-line;
 }
 .task-infor .row-detail-task .task-description .text{
     font-size: 10px;
@@ -431,6 +432,7 @@ table.nocolor, table.nocolor tr, table.nocolor td {
     color: #ababab;
     font-weight: normal;
 }
+
 .create-new-task .input-select{
     background-color: white;
     padding-bottom: 0px;
@@ -810,4 +812,9 @@ table.nocolor, table.nocolor tr, table.nocolor td {
 }
 .cursor-no-drop{
     cursor: no-drop
+}
+.vue-wrapper.messenger .title-input-alert{
+    font-size: 10px;
+    color: #ababab;
+    font-weight: normal;
 }

@@ -500,11 +500,8 @@ td {
 .table-hover>tbody>tr:hover {
     background-color: rgba(0, 139, 139, 0.1);
 }
-.hover {
-	display: none;
-}
-tr:hover .hover {
-	display: initial;
+#unmanaged-employee tr:hover .hover {
+	display: initial !important;
 }
 .delete-forever {
 	font-size: 12px;
@@ -616,6 +613,10 @@ color: #333333;
     background:#fff;
     cursor:unset;
     color:#ccc;
+}
+/*scope lại tránh bị lỗi modal bên todo*/
+#unmanaged-employee .hover {
+	display: none;
 }
 .no-data a{
     color:#ccc;
