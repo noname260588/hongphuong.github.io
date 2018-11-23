@@ -1155,6 +1155,7 @@ Vue.component('decimal-input', {
             v-bind:class="inputclass" 
             v-bind:title="title"
             v-on:keypress="check_number"
+            @paste.prevent
             v-bind:disabled="disabled"
             v-bind:data-lpignore="datalpignore">
     `,
@@ -1752,6 +1753,7 @@ Vue.component('add-kpi-methods-modal', {
 
     template: $('#add-kpi-methods-modal-template').html(),
     mounted:function(){
+        // alert('mounted in add-kpi-methods-modal');
         var that=this;
         $('#add-kpi-methods-modal').on('show.bs.modal', function (e) {
             // when the organization do not enable kpi lib, we should show modal new-kpi-by-category directly
@@ -2485,7 +2487,8 @@ Vue.component('kpi-row', {
 
 var v = new Vue({
     delimiters: ['${', '}$'],
-    el: '#container',
+    // el: '#container',
+    el: '#content',
     data: {
         evidences: {},
         current_evidence: null,
@@ -2662,6 +2665,7 @@ var v = new Vue({
         //datatemp for kpilib
         visible: false,
         // end data temp for kpi lib
+        organization:[],
     },
     validators: {
         numeric: { // `numeric` custom validator local registration
@@ -2672,9 +2676,6 @@ var v = new Vue({
         },
     },
     computed: {
-        organization(){
-            return this.$store.getters.organization;
-        },
         parentKPIs: function (){
             var kpis = getKPIParentOfViewedUser(this.kpi_list);
             return kpis;
@@ -3066,8 +3067,8 @@ var v = new Vue({
             weight = kpi.weight;
             this.active_kpi_id = kpi_id;
 
+            this.checkChild(this.active_kpi_id); // CHECK kpi nay la kpi cha hay kpi con
             this.constructOldWeight();
-            this.checkChild(this.active_kpi_id);
 
 
             if (parseFloat(weight) !== 0.0) {
@@ -5289,7 +5290,7 @@ var v = new Vue({
                 async: false,
                 url: COMMON.LinkOrgAPI,
                 success: function (data) {
-                    that.$store.commit("organizationMutation",data)
+                    that.$set(that.$data,  'organization', data);
 
                     console.log(that.organization)
                     that.check_status_msg_expired();
