@@ -4375,6 +4375,9 @@ button.close{
     border-radius:3px;
     margin-right:-15px;
 }
+#edit-all-weight-modal tbody{
+    border:none;
+}
 #edit-all-weight-modal .modal-header .title{
     font-size:20px;
     font-weight:bold;
@@ -4398,6 +4401,9 @@ button.close{
 }
 #edit-all-weight-modal .modal-content .modal-footer .btn-save{
     padding:5px 10px;
+}
+#edit-all-weight-modal .modal-content .modal-footer .btn-save:focus{
+    color:white;
 }
 #list-kpi{
     border-collapse: collapse;

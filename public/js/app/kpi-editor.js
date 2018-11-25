@@ -80,12 +80,14 @@ function toggleKPI_ID() {
 }
 
 function create_scrolltofixed() {
+    // return;
     var msg_height = 0;
     console.log('create scrollToFixed');
     $('#toolbar').scrollToFixed({
         marginTop: function () {
-            msg_height = ($('#msg-expired').outerHeight() == null || localStorage.getItem('status_msg_expired') == 'true') ? 0 : $('#msg-expired').outerHeight();
-            return $("#navbar").outerHeight() + msg_height - 1;
+            // msg_height = ($('#msg-expired').outerHeight() == null || localStorage.getItem('status_msg_expired') == 'true') ? 0 : $('#msg-expired').outerHeight();
+            // return $("#navbar").outerHeight() + msg_height - 1;
+            return $("#navbar").outerHeight() ;
         },
         preFixed: function () {
             $('#toolbar').addClass('docked');
@@ -98,6 +100,7 @@ function create_scrolltofixed() {
         zIndex: 1003
 
     });
+    return;
     $('#content-nav-wrapper').scrollToFixed({
         marginTop: function () {
             msg_height = ($('#msg-expired').outerHeight() == null || localStorage.getItem('status_msg_expired') == 'true') ? 0 : $('#msg-expired').outerHeight();

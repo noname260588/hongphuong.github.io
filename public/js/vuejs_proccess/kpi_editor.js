@@ -406,6 +406,11 @@ Vue.mixin({
 
     },
     methods: {
+        can_add_or_remove_exscore: function(month){
+            var is_person_have_permission = (COMMON.IsManager === 'True' || this.is_user_system === true)
+            var is_month_can_do = (this.organization.monthly_review_lock === 'allow_all' || this.organization.monthly_review_lock === month);
+            return (is_person_have_permission === true || is_month_can_do === true)
+        },
         get_child_kpis_from_kpi_list:function(kpi_id){
 
             var that =  this;
@@ -428,7 +433,7 @@ Vue.mixin({
             var parent_kpi_id = kpi_id;
 
             if(top_level == true){
-                parent_kpi_id=that.get_top_level_parent_kpi_id(kpi_id);
+                parent_kpi_id=that.$root.get_top_level_parent_kpi_id(kpi_id);
             }
 
             jqXhr = cloudjetRequest.ajax({
@@ -451,6 +456,7 @@ Vue.mixin({
                 }
             });
 
+            return jqXhr;
             //delete old data  after reload
             //this.kpi_list[kpi_id]
 
@@ -1127,7 +1133,7 @@ Vue.component('decimal-input', {
         'title',
         'disabled',
         'datalpignore',
-        'data-qtipopts'
+        'data-qtipopts',
     ],
     // props: {
     //     'id':String,
@@ -1151,13 +1157,16 @@ Vue.component('decimal-input', {
     // `,
     template: `
         <input 
-            type="string" v-model="model"
+            type="text" v-model="model"
             v-bind:class="inputclass" 
             v-bind:title="title"
             v-on:keypress="check_number"
             @paste.prevent
             v-bind:disabled="disabled"
-            v-bind:data-lpignore="datalpignore">
+            v-bind:data-lpignore="datalpignore"
+            :step="step"
+            :max="max"
+            :min="min">
     `,
     computed: {
         model:{
@@ -1580,7 +1589,7 @@ Vue.component('kpi-config', {
             });
 
         },
-        copy_data_to_children_anchor:function (kpi_id) {
+        copy_data_to_children:function (kpi_id) {
             var that = this;
             swal({
                 title: gettext( "Copy all the data to sub-KPIs"),
@@ -1590,7 +1599,9 @@ Vue.component('kpi-config', {
                 cancelButtonText: gettext( "Cancel"),
                 confirmButtonColor: "#DD6B55",
                 confirmButtonText: gettext( "OK"),
-                closeOnConfirm: true
+
+                // closeOnConfirm: true, // this config will be block the page
+                closeOnConfirm: false, // https://stackoverflow.com/a/32981216/6112615
             }, function () {
 
                 var data = {'command': 'copy_data_to_children', 'id': kpi_id};
@@ -1599,6 +1610,12 @@ Vue.component('kpi-config', {
                     type: 'post',
                     data: data,
                     success: function (response) {
+                        // setTimeout(function () {
+                        //     // This will close the alert 500ms after the callback fires.
+                        //     //swal.close();
+                        //     swal(gettext( "Success"), gettext( "Data is successfully copied"), "success");
+                        //     that.reload_kpi(kpi_id);
+                        // }, 500);
                         swal(gettext( "Success"), gettext( "Data is successfully copied"), "success");
                         that.reload_kpi(kpi_id);
                     },
@@ -2503,11 +2520,13 @@ var v = new Vue({
         content: '',
         kpi_list: {},
         list_group: {},
-        total_weight: {},
+        // total_weight: {},
+        total_weight_by_user: {},
         toggle_states: {},
         total_weight_bygroup: {'A': 0, 'B': 0, 'C': 0, 'O': 0, 'G': 0},
         total_kpis_bygroup: {'A': 0, 'B': 0, 'C': 0, 'O': 0, 'G': 0},
-        total_old_weight: {},
+        // total_old_weight: {},
+        total_old_weight_by_user: {},
         total_old_weight_bygroup: {'A': 0, 'B': 0, 'C': 0, 'O': 0, 'G': 0},
         total_old_kpis_bygroup: {'A': 0, 'B': 0, 'C': 0, 'O': 0, 'G': 0},
         active_kpi_id: '',
@@ -2666,6 +2685,7 @@ var v = new Vue({
         visible: false,
         // end data temp for kpi lib
         organization:[],
+        parent_score_auto:true,
     },
     validators: {
         numeric: { // `numeric` custom validator local registration
@@ -2680,19 +2700,32 @@ var v = new Vue({
             var kpis = getKPIParentOfViewedUser(this.kpi_list);
             return kpis;
         },
+        group_bsc_category_kpis: function () {
+            return _.groupBy(this.parentKPIs, 'bsc_category')
+        },
         total_weight_exclude_delayed: function () {
-            var total = 0, _this = this;
+            var total = 0;
+            var that = this;
+
             Object.values(this.parentKPIs).forEach(function (kpi) {
-                if (kpi.id != _this.active_kpi_id) {
+                if (kpi.id != that.active_kpi_id) {
                     total += parseFloat(kpi.weight) || 0;
                 }
-            })
+            });
             return total;
         },
         total_old_weight_kpi_parent: function () {
-            var total = 0, _this = this;
+            var total = 0;
+            var that = this;
             Object.values(this.parentKPIs).forEach(function (kpi) {
                 total += parseFloat(kpi.old_weight) || 0;
+            });
+            return total;
+        },
+        total_weight_edit_kpi_parent: function () {
+            var total = 0;
+            Object.values(this.parentKPIs).forEach(function (kpi){
+                total += parseFloat(kpi.new_weight) || 0;
             })
             return total;
         },
@@ -3044,9 +3077,6 @@ var v = new Vue({
         this.$on('toggle_weight_kpi', function (kpi_id) {
             that.toggle_weight_kpi(kpi_id);
         });
-
-
-
     },
     methods: {
         to_percent: function (val, total) {
@@ -3147,14 +3177,24 @@ var v = new Vue({
             });
         },
         update_data_on_kpi_removed: function(kpi_id){
+
             var that = this;
-            that.total_weight[that.kpi_list[kpi_id].user] -= that.kpi_list[kpi_id].weight; // ??????
-            that.remove_kpi_data(kpi_id);
+            var parent_kpi_id = that.$root.get_top_level_parent_kpi_id(kpi_id);
+            if (parent_kpi_id != kpi_id){ // child kpi
+                // when child remove kpi, we should reload top-level kpi to make sure kpi score & weight update accordingly
+                that.reload_kpi(parent_kpi_id);
+            }
+            else{
+                that.$delete(that.kpi_list, kpi_id);
+            }
+            that.get_current_employee_performance();
+
         },
 
 
 
         remove_kpi_data: function(kpi_id){
+            // alert('remove_kpi_data');
             var that = this;
             var child_kpis=that.get_child_kpis_from_kpi_list(kpi_id);
             if (child_kpis.length > 0){
@@ -3170,6 +3210,7 @@ var v = new Vue({
 
         },
         update_data_on_kpi_reloaded: function(kpi_data){
+
             var that = this;
 
             var update_kpi_data=function (kpi) {
@@ -3181,12 +3222,17 @@ var v = new Vue({
                 }
                 that.$set(that.kpi_list, kpi.id, kpi);
             };
+            if (kpi_data){
+                // alert('that.remove_kpi_data(kpi_data.id);');
+                that.remove_kpi_data(kpi_data.id);
 
-            that.remove_kpi_data(kpi_data.id);
 
-            // alert('set new data after reload kpi');
-            update_kpi_data(kpi_data);
-            // this.kpi_list[]
+                // alert('set new data after reload kpi');
+                update_kpi_data(kpi_data);
+                // this.kpi_list[]
+            }
+
+
         },
 
 
@@ -3268,9 +3314,7 @@ var v = new Vue({
             });
 
         },
-        // set_selected_kpilib: function (k) { // unused
-        //     this.selected_kpilib = k;
-        // },
+
 
         add_kpi:function(from_kpilib=false, kpi_data){
             var that = this;
@@ -3323,30 +3367,7 @@ var v = new Vue({
         percent_progressbar: function(kpi_id){
             return this.kpi_list[kpi_id].latest_score*100/this.organization.max_score;
         },
-        // moved to mixin
-        // get_inline_monthscores: function (monthstext, quarter, kpi) {
-        //     // monthstext: ex: "T1|T2|T3|T4|T5|T6|T7|T8|T9|T10|T11|T12"
-        //
-        //
-        //     var month_1_text=this.monthDisplay(monthstext, quarter, 1);
-        //     var month_2_text=this.monthDisplay(monthstext, quarter, 2);
-        //     var month_3_text=this.monthDisplay(monthstext, quarter, 3);
-        //
-        //     var month_1_score_text=this.scoreDisplay(kpi.month_1_score);
-        //     var month_2_score_text=this.scoreDisplay(kpi.month_2_score);
-        //     var month_3_score_text=this.scoreDisplay(kpi.month_3_score);
-        //
-        //     return `${month_1_text}:${month_1_score_text} | ${month_2_text}:${month_2_score_text} | ${month_3_text}:${month_3_score_text}`
-        //
-        //
-        // },
-        // monthDisplay:function(monthstext, quarter, order){
-        //     // // https://stackoverflow.com/a/33671045/6112615
-        //     return this.$options.filters.monthDisplay(monthstext, quarter, order);
-        // },
-        // scoreDisplay:function(score){
-        //     return this.$options.filters.scoreDisplay(score);
-        // },
+
         type_ico_url: function(type){
             var doc_type = ['docx','pdf','xls','xlsx','doc'];
             var img_type = ['jpg', 'jpeg', 'bmp', 'png'];
@@ -3460,7 +3481,11 @@ var v = new Vue({
             return $(arr1).not(arr2).length == 0 && $(arr2).not(arr1).length == 0
         },
 
-
+        formatWeight: function (val) {
+            if (typeof val == 'number') {
+                return val.toFixed(2);
+            }
+        },
 
 
         delete_all_kpis: function () {
@@ -3478,29 +3503,7 @@ var v = new Vue({
                 },
             })
         },
-        // moved to kpi-progressbar component
-        // disable_edit_target: function(kpi){
-        //     if (this.is_user_system) return false;
-        //     console.log("target:", kpi.id)
-        //     return !(kpi.enable_edit && this.organization.allow_edit_monthly_target && this.organization.enable_to_edit);
-        //
-        // },
-        // moved to mixin
-        // can_edit_current_month: function (current_month, monthly_review_lock){ //check whether currrent month is allowed to edit
-        //     return monthly_review_lock == "allow_all"?true: current_month==monthly_review_lock
-        // },
-        // move to kpi-progressbar component
-        // disable_review_kpi: function(parent_id, current_month){
-        //     if (this.is_user_system) return false;
-        //     var is_manager = COMMON.UserId != COMMON.UserViewedId;
-        //     var current_month_locked = !(this.can_edit_current_month(current_month, this.organization.monthly_review_lock));
-        //     if (is_manager){ // if current Login user is parent of user viewed
-        //         return ( !this.organization.allow_manager_review || current_month_locked ) // manager can edit if enable_to_edit not pass
-        //     }
-        //     else {
-        //         return ( !this.organization.allow_employee_review || current_month_locked ) // employee can edit(review) kpi only if not pass self_review_date
-        //     }
-        // },
+
         hide_modal: function (modal_id) {
             $(modal_id).modal('hide');
         },
@@ -3616,6 +3619,7 @@ var v = new Vue({
                     self.current_children_data=Object.assign({}, data);
                     // self.$set(self.$data, 'current_children_data', data);
                     self.$set(self.kpi_list[kpi_id], 'children_data', data.children_data)
+                    self.parent_score_auto = data.children_data.parent_score_auto;
                     // self.$set(self.$data, 'kpi_list[' + kpi_id + '].children_data', Object.assign({}, data.children_data))
                     console.log(self.current_children_data)
                     // self.$compile(self.$el)
@@ -3634,6 +3638,8 @@ var v = new Vue({
         confirm_switching_autocal: function(close_modal = true) {
             var self = this;
             //  if(self.organization.default_auto_score_parent === true){
+
+            self.current_children_data.children_data.parent_score_auto = this.parent_score_auto;
             self.current_children_data.children_data.children_weights.map(function (elm) {
                 elm.weight = parseFloat(elm.weight);
                 elm.weight_temp = parseFloat(elm.weight_temp);
@@ -4158,42 +4164,7 @@ var v = new Vue({
             }
             return moment(time).format('HH:mm:ss DD/MM/YYYY');
         },
-        // moved to kpi-progressbar component
-        // check_quarter_plan: function (kpi_id, type) {
-        //     var that = this;
-        //     var quarter = "one";
-        //     switch (that.current_quarter.quarter) {
-        //         case 1:
-        //             quarter = "one";
-        //             break;
-        //         case 2:
-        //             quarter = "two";
-        //             break;
-        //         case 3:
-        //             quarter = "three";
-        //             break;
-        //         case 4:
-        //             quarter = "four";
-        //             break;
-        //         default:
-        //             break;
-        //     }
-        //     var quarter_plan = that.kpi_list[kpi_id]['quarter_' + quarter + '_target'];
-        //     var month_1_target = that.kpi_list[kpi_id].month_1_target ? that.kpi_list[kpi_id].month_1_target : 0;
-        //     var month_2_target = that.kpi_list[kpi_id].month_2_target ? that.kpi_list[kpi_id].month_2_target : 0;
-        //     var month_3_target = that.kpi_list[kpi_id].month_3_target ? that.kpi_list[kpi_id].month_3_target : 0;
-        //     console.log('var actual_target = parseFloat((month_1_target + month_2_target + month_3_target).toFixed(5));'
-        //         + typeof month_1_target + '|'
-        //         + typeof month_2_target + '|'
-        //         + typeof month_3_target + '|'
-        //     )
-        //     var actual_target = parseFloat((month_1_target + month_2_target + month_3_target).toFixed(5));
-        //     return that.kpi_list[kpi_id].score_calculation_type == 'sum' && (that.kpi_list[kpi_id].target != quarter_plan || that.kpi_list[kpi_id].target != actual_target);
-        // },
 
-        // kpi_ready: function (kpi_id, controller_prefix, ready) {
-        //     kpi_ready(kpi_id, controller_prefix, ready);
-        // },
         get_company_performance: function (company_params) {
             if (company_params.ceo_id == null) {
                 return false
@@ -4267,79 +4238,7 @@ var v = new Vue({
         get_weight_bygroup: function (group) {
             return this.total_weight_bygroup[group];
         },
-        // moved to kpi-row components
-        // is_root_kpi: function (kpi) {
-        //
-        //     that = this;
-        //     if (kpi.parent == 0 || kpi.parent == undefined || kpi.parent == null) {
-        //         return true;
-        //     }
-        //     else {
-        //         return true;
-        //     }
-        // },
-        // moved to kpi-progressbar component
-        // get_title_tooltip: function (kpi_month_value, disable, month_number, kpi_type) {
-        //     that = this;
-        //     var message;
-        //     var month_name = month_number == 1 ? that.month_1_name : month_number == 2 ? that.month_2_name : month_number == 3 ? that.month_3_name : '';
-        //     switch (kpi_type) {
-        //         case 1:
-        //             switch (month_number) {
-        //                 case 1:
-        //                     if ((!kpi_month_value.enable_review || !disable.enable_month_1_review))
-        //                         if ((kpi_month_value.month_2 != null || kpi_month_value.month_3 != null) && kpi_month_value.month_1 == null) {
-        //                             message = gettext("You forget review the result") + ' ' + month_name;
-        //                         } else if ((kpi_month_value.month_2 == null || kpi_month_value.month_3 == null) && kpi_month_value.month_1 == null) {
-        //                             message = gettext("You can not to review the result earlier than the specified time") + ' ' + month_name;
-        //                             if (!(!kpi_month_value.enable_review || !disable.enable_month_2_review) || !(!kpi_month_value.enable_review || !disable.enable_month_3_review)) {
-        //                                 message = gettext("You forget review the result") + ' ' + month_name;
-        //                             }
-        //                         } else if ((kpi_month_value.month_2 != null || kpi_month_value.month_3 != null) && kpi_month_value.month_1 != null) {
-        //                             message = gettext("Over time to review the KPI result") + ' ' + month_name;
-        //                         }
-        //                     break;
-        //                 case 2:
-        //                     if ((!kpi_month_value.enable_review || !disable.enable_month_2_review))
-        //                         if ((kpi_month_value.month_1 != null || kpi_month_value.month_3 != null) && kpi_month_value.month_2 == null) {
-        //                             message = gettext("You forget review the result") + ' ' + month_name;
-        //                         } else if ((kpi_month_value.month_1 == null || kpi_month_value.month_3 == null) && kpi_month_value.month_2 == null) {
-        //                             message = gettext("You can not to review the result earlier than the specified time") + ' ' + month_name;
-        //                             if (!(!kpi_month_value.enable_review || !disable.enable_month_3_review)) {
-        //                                 message = gettext("You forget review the result") + ' ' + month_name;
-        //                             }
-        //                         } else if ((kpi_month_value.month_1 != null || kpi_month_value.month_3 != null) && kpi_month_value.month_2 != null) {
-        //                             message = gettext("Over time to review the KPI result") + ' ' + month_name;
-        //                         }
-        //                     break;
-        //                 case 3 :
-        //                     if ((!kpi_month_value.enable_review || !disable.enable_month_3_review))
-        //                         if ((kpi_month_value.month_2 != null || kpi_month_value.month_1 != null) && kpi_month_value.month_3 == null) {
-        //                             message = gettext("You forget review the result") + ' ' + month_name;
-        //                         } else if ((kpi_month_value.month_2 == null || kpi_month_value.month_1 == null) && kpi_month_value.month_3 == null) {
-        //                             message = gettext("You can not to review the result earlier than the specified time") + ' ' + month_name;
-        //                         } else if ((kpi_month_value.month_2 != null || kpi_month_value.month_1 != null) && kpi_month_value.month_3 != null) {
-        //                             message = gettext("Over time to review the KPI result") + ' ' + month_name;
-        //                         }
-        //                     break;
-        //                 default:
-        //                     message = null;
-        //                     break;
-        //             }
-        //             break;
-        //         case 2:
-        //             if (disable)
-        //                 return gettext("You can not change the KPI Goal") + ' ' + month_name + ' ' + gettext("switch to the Latest month caculation method to change");
-        //             break;
-        //         case 3:
-        //             if (disable)
-        //                 return gettext("This is KPI Achievements") + ' ' + month_name + ' ' + gettext("you can only view and can not edit");
-        //             break;
-        //         default:
-        //             break;
-        //     }
-        //     return message;
-        // },
+
         get_url_order_quarter: function (id) {
             if (window.location.href.search('/emp/') != -1) {
                 if (id == that.current_quarter.id) {
@@ -4379,89 +4278,33 @@ var v = new Vue({
                     break;
             }
         },
-
-        calculate_total_old_weight: function () {
-            that = this;
-            that.total_old_weight = {};
-            that.total_old_weight_bygroup = {'A': 0, 'B': 0, 'C': 0, 'O': 0, 'G': 0};
-            that.total_old_kpis_bygroup = {'A': 0, 'B': 0, 'C': 0, 'O': 0, 'G': 0};
-
-            Object.keys(that.kpi_list).forEach(function (key) {
-                // console.log(key, obj[key]);
-                var current = 0;
-                //   console.log(that.kpi_list[key]);
-                var kpi = that.kpi_list[key];
-
-                if (that.total_old_weight[kpi.user] != undefined) {
-                    current = parseFloat(that.total_old_weight[kpi.user]);
-                }
-
-                if (kpi.parent == 0 || kpi.parent == undefined || kpi.parent == null) {
-                    that.total_old_weight[kpi.user] = parseFloat(current) + parseFloat(kpi.old_weight);
-
-                    Object.keys(that.total_old_weight_bygroup).forEach(function (key) {
-                        if (key == kpi.group) {
-                            that.total_old_weight_bygroup[key] += parseFloat(kpi.old_weight);
-                            that.total_old_kpis_bygroup[key] += 1;
-                        }
-                    });
-                }
-
-                // Calculate % by group and around
-                if (kpi.bsc_category == 'financial' && kpi.refer_to == null){
-                    var weight = parseFloat(kpi.weight*100/that.total_weight[kpi.user]).toFixed(1);
-                    that.total_edit_weight.financial_ratio += parseFloat(weight);
-                    return;
-                }
-                if (kpi.bsc_category == 'customer' && kpi.refer_to == null){
-                    var weight = parseFloat(kpi.weight*100/that.total_weight[kpi.user]).toFixed(1);
-                    that.total_edit_weight.customer_ratio += parseFloat(weight);
-                    return;
-                }
-                if (kpi.bsc_category == 'internal' && kpi.refer_to == null){
-                    var weight = parseFloat(kpi.weight*100/that.total_weight[kpi.user]).toFixed(1);
-                    that.total_edit_weight.internal_ratio += parseFloat(weight);
-                    return;
-                }
-                if (kpi.bsc_category == 'learninggrowth' && kpi.refer_to == null){
-                    var weight = parseFloat(kpi.weight*100/that.total_weight[kpi.user]).toFixed(1);
-                    that.total_edit_weight.learninggrowth_ratio += parseFloat(weight);
-                    return;
-                }
-                if (kpi.bsc_category == 'other' && kpi.refer_to == null){
-                    var weight = parseFloat(kpi.weight*100/that.total_weight[kpi.user]).toFixed(1);
-                    that.total_edit_weight.other_ratio += parseFloat(weight);
-                    return;
-                }
-                // console.log(kpi.user)
-                // console.log(that.total_weight)
-            });
+        calculate_total_weight_edit_by_group: function(category){
+            var total = 0;
+            var kpis = Object.values(this.parentKPIs).filter(function (kpi) {
+                return kpi.bsc_category == category;
+            })
+            kpis.forEach(function (kpi) {
+                total += parseFloat(kpi.new_weight) || 0;
+            })
+            return total;
         },
-
         calculate_total_weight: function () {
-            that = this;
-            that.total_weight = {};
-            that.total_weight_bygroup = {'A': 0, 'B': 0, 'C': 0, 'O': 0, 'G': 0};
-            that.total_kpis_bygroup = {'A': 0, 'B': 0, 'C': 0, 'O': 0, 'G': 0};
-            that.total_edit_weight = {'financial':0,'financial_ratio':0,'financial_total':0,
-                'customer':0,'customer_ratio':0,'customer_total':0,
-                'internal':0,'internal_ratio':0,'internal_total':0,
-                'learninggrowth':0,'learninggrowth_ratio':0,'learninggrowth_total':0,
-                'other':0,'other_ratio':0,'other_total':0};
+            var that = this;
 
+            var calculate__total_current_weight= function(){
+                that.total_weight_by_user = {};
+                that.total_weight_bygroup = {'A': 0, 'B': 0, 'C': 0, 'O': 0, 'G': 0};
+                that.total_kpis_bygroup = {'A': 0, 'B': 0, 'C': 0, 'O': 0, 'G': 0};
 
-            Object.keys(that.kpi_list).forEach(function (key) {
-
-                // console.log(key, obj[key]);
                 var current = 0;
-                //   console.log(that.kpi_list[key]);
-                var kpi = that.kpi_list[key];
-                if (that.total_weight[kpi.user] != undefined) {
-                    current = parseFloat(that.total_weight[kpi.user]);
-                }
+                Object.keys(that.parentKPIs).forEach(function (key) {
+                    var kpi = that.parentKPIs[key];
 
-                if (kpi.parent == 0 || kpi.parent == undefined || kpi.parent == null) {
-                    that.total_weight[kpi.user] = parseFloat(current) + parseFloat(kpi.weight);
+                    if (that.total_weight_by_user[kpi.user] != undefined) {
+                        current = parseFloat(that.total_weight_by_user[kpi.user]);
+                    }
+
+                    that.total_weight_by_user[kpi.user] = parseFloat(current) + parseFloat(kpi.weight);
 
                     Object.keys(that.total_weight_bygroup).forEach(function (key) {
                         if (key == kpi.group) {
@@ -4469,68 +4312,103 @@ var v = new Vue({
                             that.total_kpis_bygroup[key] += 1;
                         }
                     })
-                }
 
-                // Total weight by category
-                if (kpi.bsc_category == 'financial' && kpi.refer_to ==  null) {
-                    that.total_edit_weight.financial += parseFloat(kpi.weight);
-                    that.total_edit_weight.financial_total += 1;
-                    return;
-                }
-                if (kpi.bsc_category == 'customer' && kpi.refer_to == null){
-                    that.total_edit_weight.customer += parseFloat(kpi.weight);
-                    that.total_edit_weight.customer_total += 1;
-                    return;
-                }
-                if (kpi.bsc_category == 'internal' && kpi.refer_to ==null){
-                    that.total_edit_weight.internal += parseFloat(kpi.weight);
-                    that.total_edit_weight.internal_total += 1;
-                    return;
-                }
-                if (kpi.bsc_category == 'learninggrowth' && kpi.refer_to == null){
-                    that.total_edit_weight.learninggrowth += parseFloat(kpi.weight);
-                    that.total_edit_weight.learninggrowth_total += 1;
-                    return;
-                }
-                if (kpi.bsc_category == 'other' && kpi.refer_to == null ){
-                    that.total_edit_weight.other += parseFloat(kpi.weight);
-                    that.total_edit_weight.other_total += 1;
-                    return;
-                }
-                // Total weight by category
-                if (kpi.bsc_category == 'financial' && kpi.refer_to ==  null) {
-                    that.total_edit_weight.financial += parseFloat(kpi.weight);
-                    that.total_edit_weight.financial_total += 1;
-                    return;
-                }
-                if (kpi.bsc_category == 'customer' && kpi.refer_to == null){
-                    that.total_edit_weight.customer += parseFloat(kpi.weight);
-                    that.total_edit_weight.customer_total += 1;
-                    return;
-                }
-                if (kpi.bsc_category == 'internal' && kpi.refer_to ==null){
-                    that.total_edit_weight.internal += parseFloat(kpi.weight);
-                    that.total_edit_weight.internal_total += 1;
-                    return;
-                }
-                if (kpi.bsc_category == 'learninggrowth' && kpi.refer_to == null){
-                    that.total_edit_weight.learninggrowth += parseFloat(kpi.weight);
-                    that.total_edit_weight.learninggrowth_total += 1;
-                    return;
-                }
-                if (kpi.bsc_category == 'other' && kpi.refer_to == null ){
-                    that.total_edit_weight.other += parseFloat(kpi.weight);
-                    that.total_edit_weight.other_total += 1;
-                    return;
-                }
+                });
+            };
+            var calculate__total_old_weight = function () {
 
-                // console.log(kpi.user)
-                // console.log(that.total_weight)
+                that.total_old_weight = {};
+                that.total_old_weight_bygroup = {'A': 0, 'B': 0, 'C': 0, 'O': 0, 'G': 0};
+                that.total_old_kpis_bygroup = {'A': 0, 'B': 0, 'C': 0, 'O': 0, 'G': 0};
 
-            });
+                var current = 0;
+                Object.keys(that.parentKPIs).forEach(function (key) {
+                    var kpi = that.parentKPIs[key];
 
-            this.calculate_total_old_weight();
+                    if (that.total_old_weight_by_user[kpi.user] != undefined) {
+                        current = parseFloat(that.total_old_weight_by_user[kpi.user]);
+                    }
+                    that.total_old_weight_by_user[kpi.user] = parseFloat(current) + parseFloat(kpi.old_weight);
+
+                    Object.keys(that.total_old_weight_bygroup).forEach(function (gkey) {
+                        if (gkey == kpi.group) {
+                            that.total_old_weight_bygroup[gkey] += parseFloat(kpi.old_weight);
+                            that.total_old_kpis_bygroup[gkey] += 1;
+                        }
+                    });
+
+
+                });
+            };
+
+            var calculate__total_current_weight_by_category = function(){
+
+                that.total_edit_weight = {'financial':0,'financial_ratio':0,'financial_total':0,
+                    'customer':0,'customer_ratio':0,'customer_total':0,
+                    'internal':0,'internal_ratio':0,'internal_total':0,
+                    'learninggrowth':0,'learninggrowth_ratio':0,'learninggrowth_total':0,
+                    'other':0,'other_ratio':0,'other_total':0};
+
+                Object.keys(that.parentKPIs).forEach(function (key) {
+                    var kpi = that.parentKPIs[key];
+
+
+                    if (kpi.bsc_category == 'financial'){
+                        var weight_percent = parseFloat(kpi.weight*100/that.total_weight_by_user[kpi.user]).toFixed(1);
+                        that.total_edit_weight.financial_ratio += parseFloat(weight_percent);
+
+                        that.total_edit_weight.financial += parseFloat(kpi.weight);
+                        that.total_edit_weight.financial_total += 1;
+
+                        return;
+                    }
+                    else if (kpi.bsc_category == 'customer'){
+                        var weight_percent = parseFloat(kpi.weight*100/that.total_weight_by_user[kpi.user]).toFixed(1);
+                        that.total_edit_weight.customer_ratio += parseFloat(weight_percent);
+
+                        that.total_edit_weight.customer += parseFloat(kpi.weight);
+                        that.total_edit_weight.customer_total += 1;
+
+                        return;
+                    }
+                    else if (kpi.bsc_category == 'internal'){
+                        var weight_percent = parseFloat(kpi.weight*100/that.total_weight_by_user[kpi.user]).toFixed(1);
+                        that.total_edit_weight.internal_ratio += parseFloat(weight_percent);
+
+                        that.total_edit_weight.internal += parseFloat(kpi.weight);
+                        that.total_edit_weight.internal_total += 1;
+
+                        return;
+                    }
+                    else if (kpi.bsc_category == 'learninggrowth'){
+                        var weight_percent = parseFloat(kpi.weight*100/that.total_weight_by_user[kpi.user]).toFixed(1);
+                        that.total_edit_weight.learninggrowth_ratio += parseFloat(weight_percent);
+
+                        that.total_edit_weight.learninggrowth += parseFloat(kpi.weight);
+                        that.total_edit_weight.learninggrowth_total += 1;
+
+                        return;
+                    }
+                    else if (kpi.bsc_category == 'other'){
+                        var weight_percent = parseFloat(kpi.weight*100/that.total_weight_by_user[kpi.user]).toFixed(1);
+                        that.total_edit_weight.other_ratio += parseFloat(weight_percent);
+
+                        that.total_edit_weight.other += parseFloat(kpi.weight);
+                        that.total_edit_weight.other_total += 1;
+
+                        return;
+                    }
+
+
+                });
+            };
+
+            calculate__total_current_weight();
+            calculate__total_current_weight_by_category ();
+            calculate__total_old_weight();
+
         },
+
         change_weight: function(kpi){
             var that = this;
             if(kpi.weight<=0){
@@ -4559,8 +4437,8 @@ var v = new Vue({
             console.log("Triggered resume weight")
             Object.keys(that.kpi_list).forEach(function (key) {
                 that.kpi_list[key].weight = that.kpi_list[key].old_weight;
-            })
-            that.$set(that.$data, 'kpi_list',Object.assign({}, that.kpi_list));
+            });
+            that.$set(that, 'kpi_list',Object.assign({}, that.kpi_list));
         },
         update_kpi_default_real: function (kpi, show_blocking_modal) {
             var data = {};
@@ -5142,7 +5020,7 @@ var v = new Vue({
 
         handleFile:function (e){
             $('.form-start').hide();
-            var width = 1;
+            var width = 1, that=this;
             var file = $('#file-upload')[0].files[0];
             var file_name = $('#file-upload')[0].files[0].name;
             this.filename = file_name;
@@ -5347,7 +5225,7 @@ var v = new Vue({
                         // item.weight_percentage = value_weight;//use jquery to locate to weight percenatge in kpi-editor relative to kpi
 
                         // Update lai weight KPI
-                        var value_weight = parseFloat(item.weight*100/that.total_weight[user_id]);
+                        var value_weight = parseFloat(item.weight*100/that.total_weight_by_user[user_id]);
                         item.weight_percentage = value_weight;
 
                     })
@@ -5708,17 +5586,10 @@ var v = new Vue({
 
         edit_weight_modal: function (){
             var that = this;
-            that.kpi_list_cache = [];
-            that.calculate_total_weight();
-            console.log(that.total_edit_weight.internal_total);
+            Object.values(this.parentKPIs).forEach(function (kpi) {
+                that.$set(kpi, 'new_weight',kpi.weight);
+            });
             $('#edit-all-weight-modal').modal();
-        },
-        cancel_edit_weight: function(){
-            var that = this;
-            that.kpi_list_cache.forEach(function(kpi){
-                that.kpi_list[kpi.kpi_id].weight = kpi.weight;
-            })
-            that.calculate_total_weight();
         },
         show_kpi_msg: function (status) {
             if (status == 0) {
@@ -5742,10 +5613,25 @@ var v = new Vue({
         },
         accept_edit_weight: function() {
             var that = this;
-            that.kpi_list_cache.forEach(function(kpi){
-                that.update_kpi(that.kpi_list[kpi.kpi_id], null, that.show_kpi_msg);
+            var is_zero_kpi = _.filter(that.parentKPIs, function(kpi){
+                return kpi.new_weight <= 0 && kpi.reason === '';
             })
-
+            if (is_zero_kpi.length > 0){
+                swal({
+                        type: 'error',
+                        title: gettext("Unsuccessful"),
+                        text: gettext('Please deactive this KPI before you change KPI\'s weight to 0'),
+                        showConfirmButton: true,
+                        timer: 5000,
+                    })
+                return false;
+            }
+            Object.values(that.parentKPIs).forEach(function(kpi){
+                if (kpi.weight != kpi.new_weight) {
+                    kpi.weight = kpi.new_weight;
+                    that.update_kpi(kpi, null, that.show_kpi_msg);
+                }
+            })
         },
 
         show_backup_kpi: function () {
@@ -6256,91 +6142,19 @@ var v = new Vue({
         isNumber: function (o) {
             // Validate Numeric inputs
             if (!(o == '' || !isNaN(o - 0)) || o < 0) {
-                this.check_submit_reason = true;
+                // this.check_submit_reason = true;
                 return false;
             }
-            this.check_submit_reason = false;
-            this.check_reason();
+            // chỗ này cực kỳ vớ vẩn
+            // this.check_submit_reason = false;
+            // this.check_reason();
             return true;
         },
 
         checkChild: function (kpi_id) {
             this.is_child = !this.parentKPIs[kpi_id];
         },
-        // moved to mixin
-        // /***
-        //  * To save temp value of a kpi to temp_value object follow this structure:
-        //  * 'temp_value': {
-        //      *      'kpi_id1: {
-        //      *          'key1': {
-        //      *              'prop1': ...,
-        //      *              'prop2: ...,
-        //      *              ....
-        //      *           },
-        //      *          'key2': {
-        //      *              'prop1': ...,
-        //      *              'prop2: ...,
-        //      *              ....
-        //      *          },
-        //      *          ....
-        //      *      },
-        //      *      'kpi_id2': ....
-        //      * }
-        //  * kpi: kpi in kpi_list
-        //  * key: a unique key in temp_value. Example: to save all value of quarter target include:
-        //  'quarter_one_target', 'quarter_two_target', 'quarter_three_target', 'quarter_four_target', you can use:
-        //  'quarter_target': {
-        //                 'quarter_one_target': ....
-        //                 'quarter_two_target': ....
-        //                 'quarter_three_target': ....
-        //                 'quarter_four_target': ....
-        //             }.
-        //  When you add a key, make sure that your key is different from all other keys.
-        //  * prop: property of object specific by key. Example for key 'quarter_target' prop will be 'quarter_one_target', ....
-        //  *
-        //  * ***/
-        // tempsave_value: function (kpi, prop, key) {
-        //     var that = this;
-        //     kpi_id = kpi['id'];
-        //     if (!(that.temp_value.hasOwnProperty(kpi_id))) {
-        //         that.temp_value[kpi_id] = {};
-        //     }
-        //     if (!(that.temp_value[kpi_id].hasOwnProperty(key))) {
-        //         that.temp_value[kpi_id][key] = {};
-        //     }
-        //     if (that.temp_value[kpi_id][key][prop]) {
-        //         return;
-        //     }
-        //     else {
-        //         if (typeof kpi[prop] == 'undefined' || kpi[prop] == "")
-        //             that.temp_value[kpi_id][key][prop] = null;
-        //         else {
-        //             that.temp_value[kpi_id][key][prop] = kpi[prop];
-        //         }
-        //     }
-        // },
-        // /***
-        //  * To delete value of the object specific by key when you perform cancel of save action
-        //  *
-        //  ***/
-        // delete_temp: function (kpi, key) {
-        //     var that = this;
-        //     kpi_id = kpi['id'];
-        //     delete that.temp_value[kpi_id][key];
-        // },
-        // /***
-        //  * To revert value from temp_value to current kpi values
-        //  *
-        //  ***/
-        // cancel_action: function (kpi, key, controller_prefix) {
-        //     var that = this;
-        //     kpi_id = kpi['id'];
-        //     for (prop in that.temp_value[kpi_id][key]) {
-        //         kpi[prop] = that.temp_value[kpi_id][key][prop];
-        //     }
-        //     that.delete_temp(kpi, key);
-        //     kpi_ready(kpi['id'], controller_prefix, false);
-        // },
+
 
         /***
          * To call functions to excute the save action
@@ -6389,19 +6203,7 @@ var v = new Vue({
             }
             return total;
         },
-        // moved to mixin
-        // get_prefix_category: function(cat) {
-        //     if (cat == "financial")
-        //         return "F"
-        //     else if (cat == "customer")
-        //         return "C"
-        //     else if(cat == "internal")
-        //         return "P"
-        //     else if(cat == "learninggrowth")
-        //         return "L"
-        //     else
-        //         return "O"
-        // },
+
         loadKPIs: function() {
 
             var that = this;
@@ -6429,15 +6231,6 @@ var v = new Vue({
                 }
             });
         },
-        // move to kpi-config component
-        // getUserById: function (kpiId) {
-        //     if(kpiId == null || this.kpi_list == null || this.kpi_list.length == 0) return null;
-        //     for(var i = 0; i < this.kpi_list.length; ++i){
-        //         if(this.kpi_list[i].id == kpiId)
-        //             return this.kpi_list[i].user
-        //     }
-        //     return null;
-        // },
 
         update_score_and_ready: function(kpi, controller_prefix, ready){
             this.update_score(kpi);
@@ -6453,9 +6246,6 @@ var v = new Vue({
             this.kpi_ready(kpi.id, controller_prefix, ready);
         },
 
-        // get_data_kpilib: function(page=1){
-        //
-        // },
         update_evidence_event_callback: function (kpi_id, month, count){
             var that = this;
             var evidence={ };
@@ -6473,45 +6263,9 @@ var v = new Vue({
 
     },
 
-    events: {
 
-        // 'update_lock_exscore_review': function (option) {
-        //     var that = this
-        //     console.log('triggered update_lock_exscore_review')
-        //     if (option == 'allow_all') {
-        //         $('select#exscore-select-control').prop('disabled', false)
-        //         that.$set(that.$data, 'exscore_score.current', '---')
-        //     } else {
-        //         that.$set(that.$data, 'exscore_score.current', option);
-        //         $('#month-' + option).show();
-        //
-        //         $('select#exscore-select-control').prop('disabled', true)
-        //     }
-        // },
-        // 'update_exscore': function (month, data) {
-        //     console.log('triggered update_exscore')
-        //     var that = this
-        //     var score = data.score
-        //     console.log(data)
-        //     if (data.zero || (score + that.employee_performance['month_' + month + '_score'] < 0)) {
-        //         score = -that.employee_performance['month_' + month + '_score']
-        //     }
-        //     that.$set(that.$data, 'exscore_score[' + month + '].score', score)
-        // },
-        // 'fetch_user_exscore': function () {
-        //     console.log('triggered fetch_user_exscore')
-        //     this.fetch_exscore();
-        // }
-    },
 
 });
-//
-// v.get_current_quarter();
-// v.get_quarter_by_id();
-//
-// v.get_current_employee_performance();
-//
-// // v.loadKPIs();
 
 /**
  * Module for displaying "Waiting for..." dialog using Bootstrap
