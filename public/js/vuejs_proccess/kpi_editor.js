@@ -243,7 +243,7 @@ Vue.filter('weightDisplay', function (val) {
 // });
 Vue.filter('weightDisplay', function (val) {
     try {
-        return (val.toFixed(1) == 'NaN') ? 0 + "%" : val.toFixed(1) + "%"
+        return (val.toFixed(1) == 'NaN') ? 0 + "%" : val.toFixed(2) + "%"
     }
     catch (err) {
         return val
@@ -4408,29 +4408,29 @@ var v = new Vue({
             calculate__total_old_weight();
 
         },
-
-        change_weight: function(kpi){
-            var that = this;
-            if(kpi.weight<=0){
-                swal({
-                    type: 'error',
-                    title: gettext("Unsuccess"),
-                    text: gettext("Please deactive this KPI before you change KPI's weight to 0"),
-                    showConfirmButton: true,
-                    timer: 5000,
-                })
-                that.kpi_list[kpi.id].weight = that.cache_weight;
-                return false;
-            }
-            this.calculate_total_weight();
-        },
-        catch_change_weight: function(kpi_id, kpi_weight){
-            // Push kpi changed
-            var kpis = {'kpi_id':kpi_id, 'weight':kpi_weight};
-            var that = this;
-            that.cache_weight = kpi_weight;
-            that.kpi_list_cache.push(kpis);
-        },
+        // Ko xài
+        // change_weight: function(kpi){
+        //     var that = this;
+        //     if(kpi.weight<=0){
+        //         swal({
+        //             type: 'error',
+        //             title: gettext("Unsuccess"),
+        //             text: gettext("Please deactive this KPI before you change KPI's weight to 0"),
+        //             showConfirmButton: true,
+        //             timer: 5000,
+        //         })
+        //         that.kpi_list[kpi.id].weight = that.cache_weight;
+        //         return false;
+        //     }
+        //     this.calculate_total_weight();
+        // },
+        // catch_change_weight: function(kpi_id, kpi_weight){
+        //     // Push kpi changed
+        //     var kpis = {'kpi_id':kpi_id, 'weight':kpi_weight};
+        //     var that = this;
+        //     that.cache_weight = kpi_weight;
+        //     that.kpi_list_cache.push(kpis);
+        // },
         resume_weight: function () {
             var that = this;
             that.status_error = false;
@@ -4460,23 +4460,24 @@ var v = new Vue({
 
 
         },
-        change_weight: function(kpi){
-            var that = this;
-            if(kpi.weight<=0){
-
-                swal({
-                    type: 'error',
-                    title: gettext("Unsuccessful"),
-                    text: gettext('Please deactive this KPI before you change KPI\'s weight to 0'),
-                    showConfirmButton: true,
-                    timer: 5000
-                });
-
-                that.kpi_list[kpi.id].weight = that.cache_weight;
-                return false;
-            }
-            this.calculate_total_weight();
-        },
+        // Ko xài
+        // change_weight: function(kpi){
+        //     var that = this;
+        //     if(kpi.weight<=0){
+        //
+        //         swal({
+        //             type: 'error',
+        //             title: gettext("Unsuccessful"),
+        //             text: gettext('Please deactive this KPI before you change KPI\'s weight to 0'),
+        //             showConfirmButton: true,
+        //             timer: 5000
+        //         });
+        //
+        //         that.kpi_list[kpi.id].weight = that.cache_weight;
+        //         return false;
+        //     }
+        //     this.calculate_total_weight();
+        // },
 
         show_unique_code_modal: function (kpi_id) {
             var kpi=this.kpi_list[kpi_id];
