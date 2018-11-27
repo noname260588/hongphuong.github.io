@@ -523,7 +523,7 @@ Vue.mixin({
         },
         get_inline_monthscores: function (monthstext, quarter, kpi) {
             // monthstext: ex: "T1|T2|T3|T4|T5|T6|T7|T8|T9|T10|T11|T12"
-
+            var monthstext = "T1|T2|T3|T4|T5|T6|T7|T8|T9|T10|T11|T12";
 
             var month_1_text=this.monthDisplay(monthstext, quarter, 1);
             var month_2_text=this.monthDisplay(monthstext, quarter, 2);
@@ -1163,10 +1163,7 @@ Vue.component('decimal-input', {
             v-on:keypress="check_number"
             @paste.prevent
             v-bind:disabled="disabled"
-            v-bind:data-lpignore="datalpignore"
-            :step="step"
-            :max="max"
-            :min="min">
+            v-bind:data-lpignore="datalpignore">
     `,
     computed: {
         model:{
@@ -1384,18 +1381,14 @@ Vue.component('tag-search', {
 });
 
 
-
-Vue.directive('settooltipkpi', {
-    params: ['content'],
-    paramWatchers: {
-        content: function (val, oldVal) {
-            setToolTipKPI($(this.el),this.params.content);
-        }
+Vue.directive('settooltip', {
+    bind: function (el, binding, value) {
+        setToolTipKPI($(el), binding.value);
     },
-    bind:function () {
-        setToolTipKPI($(this.el),this.params.content);
+    update: function (el, binding, value) {
+        setToolTipKPI($(el), binding.value);
     }
-});
+})
 
 Vue.component('kpi-editable', {
     delimiters: ["{$", "$}"],
