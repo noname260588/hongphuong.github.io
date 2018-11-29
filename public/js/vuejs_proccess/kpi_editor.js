@@ -1163,6 +1163,7 @@ Vue.component('decimal-input', {
             v-on:keypress="check_number"
             @paste.prevent
             v-bind:disabled="disabled"
+            maxlength="15"
             v-bind:data-lpignore="datalpignore">
     `,
     computed: {
