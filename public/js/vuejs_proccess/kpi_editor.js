@@ -3326,7 +3326,7 @@ var v = new Vue({
 
 
             var jqXhr=cloudjetRequest.ajax({
-                url: "/performance/kpi-editor/",
+                url: location.pathname,
                 type: 'post',
                 data: data,
                 success: function (new_kpi_data) {
