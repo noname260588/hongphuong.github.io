@@ -1610,8 +1610,9 @@ Vue.component('kpi-config', {
                         //     swal(gettext( "Success"), gettext( "Data is successfully copied"), "success");
                         //     that.reload_kpi(kpi_id);
                         // }, 500);
-                        swal(gettext( "Success"), gettext( "Data is successfully copied"), "success");
                         that.reload_kpi(kpi_id);
+                        swal(gettext( "Success"), gettext( "Data is successfully copied"), "success");
+
                     },
                     error: function () {
                         swal(gettext( "Error"), gettext( "Please try again!"), "error");
