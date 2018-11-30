@@ -5548,6 +5548,7 @@ var v = new Vue({
                             //$('.kpiprogressreview-wrapper').tooltip();
                             that.$set(that.kpi_list[kpi.id], 'latest_score', data.score)
                             that.$set(that.kpi_list[kpi.id], 'real', data.real)
+                            that.$set(that.kpi_list[kpi.id], 'target', data.kpi.target);
 
                             that.kpi_list[kpi.id].latest_score = data.score; //JSON.parse(data);
                             that.kpi_list[kpi.id].real = data.real; //JSON.parse(data);
