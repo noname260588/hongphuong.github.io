@@ -1903,7 +1903,7 @@ Vue.component('kpi-row', {
                 contentType: contentType,
                 success: function(updated_kpi_data){},
                 error: function(jqxhr){
-                    alert('error on update kpi');
+                    // alert('error on update kpi');
                 },
             });
 
@@ -4080,9 +4080,7 @@ var v = new Vue({
 
         calculate_total_weight_group: function () {
             var that = this;
-
-
-
+            that.total_weight_by_user = {};
             that.total_weight_bygroup = {'A': 0, 'B': 0, 'C': 0, 'O': 0, 'G': 0};
             that.total_kpis_bygroup = {'A': 0, 'B': 0, 'C': 0, 'O': 0, 'G': 0};
 
@@ -4090,6 +4088,11 @@ var v = new Vue({
             Object.keys(that.parentKPIs).forEach(function (key) {
                 var kpi = that.parentKPIs[key];
 
+                if (that.total_weight_by_user[kpi.user] != undefined) {
+                    current = parseFloat(that.total_weight_by_user[kpi.user]);
+                }
+
+                that.total_weight_by_user[kpi.user] = parseFloat(current) + parseFloat(kpi.weight);
 
                 Object.keys(that.total_weight_bygroup).forEach(function (key) {
                     if (key == kpi.group) {
@@ -4097,10 +4100,7 @@ var v = new Vue({
                         that.total_kpis_bygroup[key] += 1;
                     }
                 })
-
             });
-
-
         },
 
         update_kpi_default_real: function (kpi, show_blocking_modal) {
