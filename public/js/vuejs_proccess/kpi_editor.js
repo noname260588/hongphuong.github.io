@@ -1465,7 +1465,7 @@ Vue.component('kpi-owner', {
     },
     computed:{
         search_url: function () {
-            return '/api/v2/searchable_peoplelist/?&limit=10&from_kpi_id=' + this.kpi.id + '&search_term='
+            return '/api/v2/searchable_peoplelist/?&limit=10&search_assign=1&from_kpi_id=' + this.kpi.id + '&search_term='
 
         },
         is_able_to_change_owner: function () {

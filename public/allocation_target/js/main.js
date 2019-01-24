@@ -701,27 +701,24 @@ var targetPage = new Vue({
             }
         },
         tableRowClassName: function ({row, rowIndex}) { // add class cho category
-            var list_classes = [];
             if (this.tableData[rowIndex].isGroup == true) {
                 if (this.tableData[rowIndex].ten_KPI == gettext('Financial')) {
-                    list_classes.push('target_fin_title');
+                    return 'target_fin_title';
                 } else if (this.tableData[rowIndex].ten_KPI == gettext('Customer')) {
-                    list_classes.push('target_client_title');
+                    return 'target_client_title'
                 }
                 else if (this.tableData[rowIndex].ten_KPI == gettext('Internal')) {
-                    list_classes.push('target_internal_title');
+                    return 'target_internal_title'
                 }
                 else if (this.tableData[rowIndex].ten_KPI == gettext('Learninggrowth')) {
-                    list_classes.push('target_clean_title');
+                    return 'target_clean_title'
                 }
                 else if (this.tableData[rowIndex].ten_KPI == gettext('More')) {
-                    list_classes.push('target_other_title');
+                    return 'target_other_title'
+                } else {
                 }
+                return '';
             }
-            if (row.weight == 0) {
-                list_classes.push("disabled");
-            }
-            return list_classes.join(" ");
         },
         createItem: function (item) { // created data cho tung kpi
             var self = this;
@@ -746,9 +743,10 @@ var targetPage = new Vue({
             // add field to export excel
             tempTableData.code = item.code == undefined ? "" : item.code;
             tempTableData.group = item.group == undefined ? "" : item.group;
-            tempTableData.weight = item.weight == undefined ? 0 : item.weight;
             if (item.refer_to){
                 tempTableData.weight_child = item.weight == undefined ? 0 : item.weight;
+            }else{
+                tempTableData.weight = item.weight == undefined ? 0 : item.weight;
             }
             tempTableData.owner_email = item.owner_email;
             tempTableData.unit = item.unit == undefined ? "" : item.unit;

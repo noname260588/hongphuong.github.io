@@ -661,6 +661,10 @@ function init_node(node) {
         init_group_user_reset_password(node);
     });
 
+    /* must be called by default */
+    init_group_user_reset_password(node);
+
+
     $("#add-sub-person").unbind('click');
     $("#add-sub-person").click(function () {
         clear_form();
