@@ -1534,13 +1534,17 @@ ul.success {
 
 .group-header .col-left {
     width: 50px !important;
+    display: flex;
+    align-items: center;
 }
 
 .group-header .col-right {
-    width: calc(96% - 50px) !important;
+    /*width: calc(96% - 130px) !important;*/
     padding: 0 10px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
 }
-
 .kpi-table .kpi-row .kpi-detail-content .rows-table-sm.auto-height {
     height: auto;
     border-bottom: none;
@@ -4025,10 +4029,10 @@ button.close{
 .adjuster-wrapper{
     text-align: center;
 }
-
-.chart-container {
-
+.adjuster-wrapper > .decimal-input__item input{
+    text-align: center;
 }
+
 .chart-container.chart-calculation-method{
     width:590px;
     height: 240px;
@@ -4037,12 +4041,6 @@ button.close{
 .adjust-input{
     width: 164px;
     height: 40px;
-    border-radius: 3px;
-    background-color: #ffffff;
-    border: solid 1px #ababab;
-    padding: 5px;
-    text-align: center;
-    margin-bottom: 5px;
 }
 .adjuster-wrapper> .performance-score{
     width: 33px;
@@ -4397,7 +4395,7 @@ button.close{
     background: transparent;
 }
 #modal-order-quarter-kpi .modal-body table{
-   text-align: left;
+    text-align: left;
 }
 #modal-order-quarter-kpi .modal-body .table-size{
     width: 100%;
@@ -4478,6 +4476,10 @@ button.close{
 .mg-t-10{
     margin-top: 10px
 }
+.mg-a-0{
+    margin: 0;
+}
+
 .mg-t-50{
     margin-top: 50px;
 }

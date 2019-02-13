@@ -346,7 +346,8 @@ function remove_person(node, delete_kpis) {
             data: JSON.stringify({
                 id: node.id,
                 user_id: node.data.user_id,
-                delete_kpis: delete_kpis
+                delete_kpis: delete_kpis,
+                permanently_deleted: false
             }),
             url: "/api/user/delete/",
             beforeSend: function () {
@@ -368,7 +369,7 @@ function remove_person(node, delete_kpis) {
                         clickOneNode(parent_node);
                     }
 
-                    peopleApp.get_list_backup_user();
+                    peopleApp.getAllBackupUser();
                 }
             },
             error: function (jqXHR, textStatus, errorThrown) {
@@ -507,9 +508,9 @@ function send_email() {
     cloudjetRequest.ajax({
         type: 'POST',
         data: {
-            user_id: $("#id-user-id").val(),
-            username: $("#id-username").val(),
-            email: $("#id-email").val()
+            user_id: peopleApp.current_node.user_id,
+            username: peopleApp.current_node.username,
+            email: peopleApp.current_node.email
         },
         url: "/performance/people/reset-password/",
         beforeSend: function () {
@@ -630,7 +631,7 @@ function init_node(node) {
     $("#" + node.id + " span").css('font-weight', 'bolder');
     $('#submit_ava').hide();
     $("#id_open_team").text(interpolate(gettext("%s's KPIs"), [node.data.name]));
-    $('span.employee_name').html(node.data.name);
+    // $('span.employee_name').html(node.data.name);
     $("#id_open_team").attr('href', '/performance/kpi-editor/emp/' + node.data.user_id);
     load_data_node(node);
     bind_avatar_upload(node);
@@ -710,19 +711,6 @@ function init_node(node) {
         );
 
         });
-
-    $("#id_login_as_employee").unbind('click');
-    $("#id_login_as_employee").click(function () {
-        $.post("/performance/login/employee/", {user_id: node.data.user_id}, function (response) {
-            if (response == "ok") {
-                location.href = "/performance/home/";
-            } else {
-                alert(gettext("Login failed."))
-            }
-        }).fail(function () {
-            alert(gettext("Something wrong. Please try again."));
-        });
-    });
 
     node_old_active = node.data.active;
 

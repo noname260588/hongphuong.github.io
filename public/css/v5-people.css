@@ -354,13 +354,14 @@
 .font12 {
 	font-size: 12px;
 }
-.info-functions a {
+.info-functions a{
 	display: block;
 	margin-left: 10px;
 	margin-bottom: 5px;
 	font-size: 14px;
 	color: #333;
 	padding: 6px;
+    cursor: pointer;
     border-bottom: 1px solid #f9f9f9;
 }
 info-functions a:last-child {
@@ -1409,4 +1410,9 @@ label.error{
     font-size: 16px;
     font-weight: bolder;
     color: #666666;
+}
+#tabs-people .font14, .modal-md .font14{
+        font-size: 14px;
+        padding-bottom: 3px;
+        line-height: 1px;
 }
