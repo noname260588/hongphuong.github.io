@@ -632,7 +632,6 @@ Vue.component('evidence-buttons', {
     },
     inject: [
         'disable_edit_target',
-        'update_kpi_with_score_affectability',
     ],
     template: '#evidence-buttons-template',
     computed:{
@@ -1376,13 +1375,15 @@ Vue.component('verify-and-save-results-modal',{
             that.loading = true
             that.internal_parent_kpis = that.get_parent_kpis();
             let jqXhr = that.get_current_employee_performance()
-                jqXhr.done(function () {
-                    that.loading = false
+            jqXhr.done(function () {
+                that.loading = false
 
-                })
-                jqXhr.fail(function () {
-                   that.loading = false
-                });
+            });
+
+            jqXhr.fail(function () {
+               that.loading = false
+            });
+
         })
 
     },
@@ -1415,10 +1416,11 @@ Vue.component('verify-and-save-results-modal',{
                     //  $('#btn-complete-review').html(gettext('Downloading! Please wait ... '));
                     that.loading = false
                     $(that.verify_and_save_result_modal_element).modal('hide');
-                })
+                });
                 jqXhr.fail(function () {
                    that.loading = false
                 });
+
             that.capture_and_download()
             vue_support.show_rate_nps()
         },
@@ -1450,7 +1452,7 @@ const EditKPIsWeightBaseModal =  {
             kpi: null,
             delay_reason:'',
             error_on_delayed: false,
-            error_on_delayed_message: '',
+            //error_on_delayed_message: '',
 
 
         }
@@ -1715,10 +1717,14 @@ Vue.component('delay-kpi-modal', {
             });
 
             // UI
-            jqxhr.fail(function () {
+            jqxhr.fail(function (e) {
                 that.error_on_delayed = true;
-                that.error_on_delayed_message = gettext('You do not have permission to delay this KPI!')
-                swal(gettext('Not successful'), gettext('Cannot delay/active this kpi'), "error")
+                //that.error_on_delayed_message = gettext('You do not have permission to delay this KPI!')
+                if (e.responseJSON.message != "" || e.responseJSON.message != null || e.responseJSON.message != undefined) {
+                    swal(gettext('Not successful'), e.responseJSON.message, "error");
+                }else{
+                    swal(gettext('Not successful'), gettext('Cannot delay/active this kpi'), "error")
+                }
             });
             jqxhr.done(function(){
                that.hide_edit_kpis_weight_modal();
@@ -1988,8 +1994,8 @@ Vue.component('kpi-progressbar', {
         //     })
         // },
 
-        triggerAdjustPerformanceThreshold(kpi_id){
-            this.$root.$emit('adjust_performance_level',kpi_id)
+        triggerAdjustPerformanceThreshold(kpi){
+            this.$root.$emit('adjust_performance_level',kpi)
         },
 
 
@@ -3345,8 +3351,8 @@ var v = new Vue({
             that.update_kpi(kpi, show_blocking_modal, callback);
         });
 
-        this.$on("adjust_performance_level", function(kpi_id) {
-            that.adjust_performance_level(kpi_id)
+        this.$on("adjust_performance_level", function(kpi) {
+            that.adjust_performance_level(kpi)
         })
         this.$on('parent_kpi_reloaded', function (kpi_data) {
             that.update_data_on_parent_kpi_reloaded(kpi_data);
@@ -4484,7 +4490,6 @@ var v = new Vue({
                     self.$set(self.$data, 'kpi_list[' + self.adjusting_kpi.id + ']', res);
                     self.reset_adjust();
 
-
                 },
                 error: function (res) {
                 }
@@ -4496,10 +4501,10 @@ var v = new Vue({
             // Reset to month 1
 
         },
-        init_adjust: function (kpi_id) {
+        init_adjust: function (kpi) {
             var self = this;
             // Clone to temp object
-            self.adjusting_kpi = Object.assign({}, self.kpi_list[kpi_id]);
+            self.adjusting_kpi = Object.assign({}, kpi);
             // Setup adjusting month to regenerate chart
 
             $.extend(true, self.adjusting_kpi, {
@@ -4546,9 +4551,9 @@ var v = new Vue({
             self.update_adjusting_chart();
 
         },
-        adjust_performance_level: function (kpi_id) {
+        adjust_performance_level: function (kpi) {
             var self = this;
-            self.init_adjust(kpi_id);
+            self.init_adjust(kpi);
             console.log(self.adjusting_kpi)
             $('#performance-level-adjust').modal();
             self.resetErrorWhenShow();
