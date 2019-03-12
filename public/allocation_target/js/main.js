@@ -667,10 +667,10 @@ var targetPage = new Vue({
                 else if (this.tableData[rowIndex].name == gettext('Internal')) {
                     list_classes.push('target_internal_title');
                 }
-                else if (this.tableData[rowIndex].name == gettext('Learninggrowth')) {
+                else if (this.tableData[rowIndex].name == gettext('Learn & Growth')) {
                     list_classes.push('target_clean_title');
                 }
-                else if (this.tableData[rowIndex].name == gettext('More')) {
+                else if (this.tableData[rowIndex].name == gettext('Others')) {
                     list_classes.push('target_other_title');
                 } else {
                 }
@@ -927,11 +927,11 @@ var targetPage = new Vue({
                         self.tableData.push.apply(self.tableData, self.tableData.concat.apply([], self.groupInternal));
                     }
                     if (self.groupLearn.length > 0) {
-                        self.tableData.push(self.createItem({name: gettext('Learninggrowth'), isGroup: true}));
+                        self.tableData.push(self.createItem({name: gettext('Learn & Growth'), isGroup: true}));
                         self.tableData.push.apply(self.tableData, self.tableData.concat.apply([], self.groupLearn));
                     }
                     if (self.groupMore.length > 0) {
-                        self.tableData.push(self.createItem({name: gettext('More'), isGroup: true}));
+                        self.tableData.push(self.createItem({name: gettext('Others'), isGroup: true}));
                         self.tableData.push.apply(self.tableData, self.tableData.concat.apply([], self.groupMore));
                     }
                     // console.log(self.tableData)
