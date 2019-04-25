@@ -29,8 +29,11 @@
 }
 #exscore-modal .el-tabs{
     box-shadow: 0 2px 8px 0 #e4e4e4;
-    max-width:690px;
+    /*max-width:690px;*/
     padding:0px 10px;
+}
+#exscore-modal .add-margin-right{
+    margin-right: 43px;
 }
 #exscore-modal .el-tabs__content{
     padding:10px;
@@ -93,7 +96,7 @@
     position: relative;
     top: 40px;
     float:left;
-    left:10px;
+    left:17px;
 }
 #exscore-modal .minus-score .block-text-number-minus{
     text-align:center;
@@ -118,7 +121,7 @@
 }
 #exscore-modal .performance-score-final{
     text-align: center;
-    margin-left:35px;
+    margin-left:13px;
     float:left;
 }
 #exscore-modal .performance-score-final h6{
@@ -507,6 +510,9 @@
     background: #007777;
 }
 
+#add-exscore-lib-modal .pre-wrap-line{
+    white-space: pre-wrap;
+}
 
 #msg-exscore-lib-modal .modal-dialog{
     max-width: 465px;
